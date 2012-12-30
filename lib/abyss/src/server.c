@@ -19,9 +19,12 @@
 #include "mallocvar.h"
 #include "xmlrpc-c/string_int.h"
 #include "xmlrpc-c/sleep_int.h"
+#include "xmlrpc-c/lock.h"
+#include "xmlrpc-c/lock_platform.h"
 
 #include "xmlrpc-c/abyss.h"
 #include "trace.h"
+#include "thread.h"
 #include "session.h"
 #include "file.h"
 #include "conn.h"
@@ -92,13 +95,10 @@ logOpen(struct _TServer * const srvP,
     success = FileOpenCreate(&srvP->logfileP, srvP->logfilename,
                              O_WRONLY | O_APPEND);
     if (success) {
-        bool success;
-        success = MutexCreate(&srvP->logmutexP);
-        if (success) {
-            *errorP = NULL;
-            srvP->logfileisopen = TRUE;
-        } else
-            xmlrpc_asprintf(errorP, "Can't create mutex for log file");
+        srvP->logLockP = xmlrpc_lock_create();
+        *errorP = NULL;
+
+        srvP->logfileisopen = TRUE;
             
         if (*errorP)
             FileClose(srvP->logfileP);
@@ -113,7 +113,7 @@ logClose(struct _TServer * const srvP) {
 
     if (srvP->logfileisopen) {
         FileClose(srvP->logfileP);
-        MutexDestroy(srvP->logmutexP);
+        srvP->logLockP->destroy(srvP->logLockP);
         srvP->logfileisopen = FALSE;
     }
 }
@@ -755,6 +755,9 @@ serverFunc(void * const userHandle) {
     bool connectionDone;
         /* No more need for this HTTP connection */
 
+    trace(srvP, "Thread starting to handle requests on a new connection.  "
+          "PID = %d", getpid());
+
     requestCount = 0;
     connectionDone = FALSE;
 
@@ -770,7 +773,9 @@ serverFunc(void * const userHandle) {
         ConnRead(connectionP, srvP->keepalivetimeout,
                  &timedOut, &eof, &readError);
 
-        if (readError) {
+        if (srvP->terminationRequested) {
+            connectionDone = TRUE;
+        } else if (readError) {
             TraceMsg("Failed to read from Abyss connection.  %s", readError);
             xmlrpc_strfree(readError);
             connectionDone = TRUE;
@@ -778,16 +783,20 @@ serverFunc(void * const userHandle) {
             connectionDone = TRUE;
         } else if (eof) {
             connectionDone = TRUE;
-        } else if (srvP->terminationRequested) {
-            connectionDone = TRUE;
         } else {
             bool const lastReqOnConn =
                 requestCount + 1 >= srvP->keepalivemaxconn;
 
             bool keepalive;
+
+            trace(srvP, "HTTP request %u at least partially received.  "
+                  "Receiving the rest and processing", requestCount);
             
             processRequestFromClient(connectionP, lastReqOnConn, srvP->timeout,
                                      &keepalive);
+
+            trace(srvP, "Done processing the HTTP request.  Keepalive = %s",
+                  keepalive ? "YES" : "NO");
             
             ++requestCount;
 
@@ -798,6 +807,7 @@ serverFunc(void * const userHandle) {
             ConnReadInit(connectionP);
         }
     }
+    trace(srvP, "PID %d done with connection", getpid());
 }
 
 
@@ -1051,6 +1061,28 @@ waitForConnectionCapacity(outstandingConnList * const outstandingConnListP,
 
 
 
+static void
+interruptChannels(outstandingConnList * const outstandingConnListP) {
+/*----------------------------------------------------------------------------
+   Get every thread that is waiting to read a request or write a response
+   for a connection to stop waiting.
+-----------------------------------------------------------------------------*/
+    TConn * connP;
+
+    for (connP = outstandingConnListP->firstP;
+         connP; connP = connP->nextOutstandingP) {
+
+        if (connP->finished) {
+            /* The connection couldn't be waiting on the channel, and the
+               channel probably doesn't even exit anymore.
+            */
+        } else 
+            ChannelInterrupt(connP->channelP);
+    }
+}
+
+
+
 #ifndef _WIN32
 void
 ServerHandleSigchld(pid_t const pid) {
@@ -1206,8 +1238,11 @@ serverRun2(TServer *     const serverP,
     trace(srvP, "Main connection accepting loop is done");
 
     if (!*errorP) {
-        trace(srvP, "Waiting for %u existing connections to finish",
+        trace(srvP, "Interrupting and waiting for %u existing connections "
+              "to finish",
               outstandingConnListP->count);
+
+        interruptChannels(outstandingConnListP);
 
         waitForNoConnections(outstandingConnListP);
     
@@ -1224,6 +1259,8 @@ ServerRun(TServer * const serverP) {
 
     struct _TServer * const srvP = serverP->srvP;
 
+    trace(srvP, "%s entered", __FUNCTION__);
+
     if (!srvP->chanSwitchP)
         TraceMsg("This server is not set up to accept connections "
                  "on its own, so you can't use ServerRun().  "
@@ -1239,6 +1276,7 @@ ServerRun(TServer * const serverP) {
             xmlrpc_strfree(error);
         }
     }
+    trace(srvP, "%s exiting", __FUNCTION__);
 }
 
 
@@ -1260,6 +1298,8 @@ serverRunChannel(TServer *     const serverP,
     TConn * connectionP;
     const char * error;
 
+    trace(srvP, "%s entered", __FUNCTION__);
+
     srvP->keepalivemaxconn = 1;
 
     ConnCreate(&connectionP, 
@@ -1278,6 +1318,7 @@ serverRunChannel(TServer *     const serverP,
 
         ConnWaitAndRelease(connectionP);
     }
+    trace(srvP, "%s exiting", __FUNCTION__);
 }
 
 
@@ -1295,6 +1336,8 @@ ServerRunChannel(TServer *     const serverP,
 -----------------------------------------------------------------------------*/
     struct _TServer * const srvP = serverP->srvP;
 
+    trace(srvP, "%s entered", __FUNCTION__);
+
     if (srvP->serverAcceptsConnections)
         xmlrpc_asprintf(errorP,
                         "This server is configured to accept connections on "
@@ -1302,6 +1345,8 @@ ServerRunChannel(TServer *     const serverP,
                         "Try ServerRun() or ServerCreateNoAccept().");
     else
         serverRunChannel(serverP, channelP, channelInfoP, errorP);
+
+    trace(srvP, "%s exiting", __FUNCTION__);
 }
 
 
@@ -1371,6 +1416,8 @@ ServerRunOnce(TServer * const serverP) {
 -----------------------------------------------------------------------------*/
     struct _TServer * const srvP = serverP->srvP;
 
+    trace(srvP, "%s entered", __FUNCTION__);
+
     if (!srvP->chanSwitchP)
         TraceMsg("This server is not set up to accept connections "
                  "on its own, so you can't use ServerRunOnce().  "
@@ -1406,6 +1453,7 @@ ServerRunOnce(TServer * const serverP) {
             }
         }
     }
+    trace(srvP, "%s exiting", __FUNCTION__);
 }
 
 
@@ -1658,15 +1706,12 @@ LogWrite(TServer *    const serverP,
         }
     }
     if (srvP->logfileisopen) {
-        bool success;
-        success = MutexLock(srvP->logmutexP);
-        if (success) {
-            const char * const lbr = "\n";
-            FileWrite(srvP->logfileP, msg, strlen(msg));
-            FileWrite(srvP->logfileP, lbr, strlen(lbr));
+        const char * const lbr = "\n";
+        srvP->logLockP->acquire(srvP->logLockP);
+        FileWrite(srvP->logfileP, msg, strlen(msg));
+        FileWrite(srvP->logfileP, lbr, strlen(lbr));
         
-            MutexUnlock(srvP->logmutexP);
-        }
+        srvP->logLockP->release(srvP->logLockP);
     }
 }
 /*******************************************************************************
