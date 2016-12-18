@@ -22,7 +22,7 @@ pkgg.generate(
   name : 'xmlrpc_util++',
   description : 'Xmlrpc-c C++ utility functions library',
   version : meson.project_version(),
-  requires : 'xmlrpc_util',
+  requires_private : 'xmlrpc_util',
   libraries : libxmlrpc_utilpp,
   install : true,
 )

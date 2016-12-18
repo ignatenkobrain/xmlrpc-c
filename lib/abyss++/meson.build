@@ -36,7 +36,7 @@ pkgg.generate(
   name : 'xmlrpc_abyss++',
   description : 'Xmlrpc-c Abyss HTTP C++ library',
   version : meson.project_version(),
-  requires : ['xmlrpc_abyss', 'xmlrpc_util++'],
+  requires_private : ['xmlrpc_abyss', 'xmlrpc_util++'],
   libraries : libxmlrpc_abysspp,
   install : true,
 )

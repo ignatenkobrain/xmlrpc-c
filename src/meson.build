@@ -52,7 +52,7 @@ pkgg.generate(
   name : 'xmlrpc',
   description : 'Xmlrpc-c basic XML-RPC library',
   version : meson.project_version(),
-  requires : ['xmlrpc_util', xmlrpc_pkgconfig_req],
+  requires_private : xmlrpc_pkgconfig_req,
   libraries : libxmlrpc,
   install : true,
 )
@@ -81,7 +81,7 @@ pkgg.generate(
   name : 'xmlrpc_server',
   description : 'Xmlrpc-c XML-RPC server library',
   version : meson.project_version(),
-  requires : ['xmlrpc', 'xmlrpc_util'],
+  requires_private : ['xmlrpc', 'xmlrpc_util'],
   libraries : libxmlrpc_server,
   install : true,
 )
@@ -112,7 +112,7 @@ if get_option('abyss-server')
     name : 'xmlrpc_server_abyss',
     description : 'Xmlrpc-c Abyss XML-RPC server library',
     version : meson.project_version(),
-    requires : ['xmlrpc', 'xmlrpc_server', 'xmlrpc_abyss', 'xmlrpc_util'],
+    requires_private : ['xmlrpc', 'xmlrpc_server', 'xmlrpc_abyss', 'xmlrpc_util'],
     libraries : libxmlrpc_server_abyss,
     install : true,
   )
@@ -142,7 +142,7 @@ if get_option('cgi-server')
     name : 'xmlrpc_server_cgi',
     description : 'Xmlrpc-c CGI XML-RPC server library',
     version : meson.project_version(),
-    requires : ['xmlrpc', 'xmlrpc_server', 'xmlrpc_util'],
+    requires_private : ['xmlrpc', 'xmlrpc_server', 'xmlrpc_util'],
     libraries : libxmlrpc_server_cgi,
     install : true,
   )
@@ -178,7 +178,7 @@ if build_client
     name : 'xmlrpc_client',
     description : 'Xmlrpc-c XML-RPC client library',
     version : meson.project_version(),
-    requires : ['xmlrpc', 'xmlrpc_util'],
+    requires_private : ['xmlrpc', 'xmlrpc_util'],
     libraries : libxmlrpc_client,
     install : true,
   )

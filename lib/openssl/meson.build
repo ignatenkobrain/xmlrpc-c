@@ -21,7 +21,7 @@ pkgg.generate(
   name : 'xmlrpc_openssl',
   description : 'Openssl convenience function from Xmlrpc-c package',
   version : meson.project_version(),
-  requires : 'xmlrpc_util',
+  requires_private : 'xmlrpc_util',
   libraries : libxmlrpc_openssl,
   install : true,
 )

@@ -61,6 +61,6 @@ pkgg.generate(
   description : 'Xmlrpc-c Abyss HTTP C library',
   version : meson.project_version(),
   libraries : libxmlrpc_abyss,
-  requires : 'xmlrpc_util',
+  requires_private : 'xmlrpc_util',
   install : true,
 )

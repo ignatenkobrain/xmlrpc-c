@@ -43,7 +43,7 @@ pkgg.generate(
   name : 'xmlrpc++',
   description : 'Xmlrpc-c basic XML-RPC C++ library',
   version : meson.project_version(),
-  requires : ['xmlrpc', 'xmlrpc_util'],
+  requires_private : ['xmlrpc', 'xmlrpc_util++'],
   libraries : libxmlrpcpp,
   install : true,
 )
@@ -68,7 +68,7 @@ pkgg.generate(
   name : 'xmlrpc_server++',
   description : 'Xmlrpc-c XML-RPC server C++ library',
   version : meson.project_version(),
-  requires : ['xmlrpc++', 'xmlrpc', 'xmlrpc_server', 'xmlrpc_util++', 'xmlrpc_util'],
+  requires_private : ['xmlrpc++', 'xmlrpc_server'],
   libraries : libxmlrpc_serverpp,
   install : true,
 )
@@ -98,7 +98,7 @@ if get_option('abyss-server')
     name : 'xmlrpc_server_abyss++',
     description : 'Xmlrpc-c Abyss XML-RPC server C++ library',
     version : meson.project_version(),
-    requires : ['xmlrpc++', 'xmlrpc', 'xmlrpc_server++', 'xmlrpc_abyss', 'xmlrpc_util++', 'xmlrpc_util'],
+    requires_private : ['xmlrpc_abyss++', 'xmlrpc_server++', 'xmlrpc_server_abyss'],
     libraries : libxmlrpc_server_abysspp,
     install : true,
   )
@@ -165,7 +165,7 @@ if build_xmlrpc_pstream
     name : 'xmlrpc_server_pstream',
     description : 'Xmlrpc-c packet-stream XML-RPC server library',
     version : meson.project_version(),
-    requires : ['xmlrpc++', 'xmlrpc', 'xmlrpc_server++', 'xmlrpc_util++', 'xmlrpc_util'],
+    requires_private : ['xmlrpc++', 'xmlrpc_server++'],
     libraries : [libxmlrpc_server_pstreampp, libxmlrpc_packetsocket],
     install : true,
   )
