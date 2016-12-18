@@ -1,0 +1,12 @@
+option('wininet-client',  type : 'boolean', value : false, description : 'Build the Wininet client XML transport')
+option('curl-client',     type : 'boolean', value : true,  description : 'Build the Curl client XML transport')
+option('libwww-client',   type : 'boolean', value : false, description : 'Build the Libwww client XML transport')
+
+option('abyss-server',    type : 'boolean', value : true,  description : 'Build the Abyss server module')
+option('abyss-threads',   type:  'boolean', value : true,  description : 'Use fork in Abyss instead of pthreads')
+option('cgi-server',      type : 'boolean', value : true,  description : 'Build the CGI server module')
+
+option('cplusplus',       type : 'boolean', value : true,  description : 'Build the C++ wrapper classes or tools')
+
+option('libwww-ssl',      type : 'boolean', value : false, description : 'Use SSL with libwww')
+option('libxml2-backend', type : 'boolean', value : false, description : 'Use libxml2 instead of built-in expat')
