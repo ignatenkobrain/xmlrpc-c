@@ -15,6 +15,14 @@ libxmlrpc_cpp = library(
   version : '8.@0@'.format(version_minor),
   install : true,
 )
+pkgg.generate(
+  name : 'xmlrpc_cpp',
+  description : 'Legacy Xmlrpc-c C++ wrapper',
+  version : meson.project_version(),
+  requires : ['xmlrpc', 'xmlrpc_server', 'xmlrpc_util'],
+  libraries : libxmlrpc_cpp,
+  install : true,
+)
 
 libxmlrpcpp = library(
   'xmlrpc++',
